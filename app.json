@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "react-native-sound-classification-app",
+    "name": "Sound Classifier",
     "slug": "react-native-sound-classification-app",
     "version": "1.0.0",
     "orientation": "portrait",
