@@ -7,6 +7,8 @@ import {
     IOSOutputFormat
 } from "expo-av/build/Audio/RecordingConstants";
 import * as FileSystem from 'expo-file-system';
+import {requestPermissionsAsync} from "expo-media-library";
+import {Alert} from "react-native";
 
 const options = {
     isMeteringEnabled: true,
@@ -79,6 +81,12 @@ export default function useAudioRecorder() {
     }, [isPlaying, sound]);
 
     async function startRecording() {
+        const permission = await requestPermissionsAsync();
+        if (!permission.granted) {
+            console.log('Permission not granted to save file');
+            return;
+        }
+
         const {granted} = await Audio.requestPermissionsAsync();
         await Audio.setAudioModeAsync({
             allowsRecordingIOS: true,
@@ -115,11 +123,14 @@ export default function useAudioRecorder() {
                 const fileName = parts[parts.length - 1];
                 console.log('File name: ', fileName);
 
-                const directory = FileSystem.documentDirectory + 'recordings/';
+                const directory = FileSystem.documentDirectory + 'akila/';
                 const newPath = directory + fileName;
+
+                console.log('Directory: ', directory);
 
                 const dirInfo = await FileSystem.getInfoAsync(directory);
                 if (!dirInfo.exists) {
+                    console.log('Creating directory: ', directory);
                     await FileSystem.makeDirectoryAsync(directory, {intermediates: true});
                 }
 
@@ -129,8 +140,12 @@ export default function useAudioRecorder() {
                         from: uri,
                         to: newPath,
                     });
+
                     console.log('Audio file moved to: ', newPath);
                     setUri(newPath);
+                    Alert.alert('Audio file saved to: ', newPath);
+                    console.log('Audio file saved to: ', fileInfo);
+
                 } else {
                     console.log('A file already exists at the destination path.');
                 }
