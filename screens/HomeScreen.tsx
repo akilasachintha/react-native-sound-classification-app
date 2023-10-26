@@ -3,6 +3,7 @@ import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import useAudioRecorder from "@hooks/useAudioRecorder";
 import {Entypo, FontAwesome, Ionicons} from "@expo/vector-icons";
 import CustomModal from "@screens/ModalScreen";
+import {StatusBar} from "expo-status-bar";
 
 export default function HomeScreen() {
     const {
@@ -37,7 +38,7 @@ export default function HomeScreen() {
     };
 
     return (
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: "#fff"}}>
             <View style={{justifyContent: "center", alignItems: "center"}}>
                 <Text style={{fontSize: 24, fontWeight: "bold", color: "rgba(59, 3, 114, 1)", marginBottom: 20}}>SOUND
                     CLASSIFICATION</Text>
@@ -148,6 +149,7 @@ export default function HomeScreen() {
             }
             <CustomModal isModalVisible={isModalVisible} setIsModalVisible={setIsModalVisible} isPredicted={isPredicted}
                          prediction={prediction}/>
+            <StatusBar style="dark"/>
         </View>
     );
 }

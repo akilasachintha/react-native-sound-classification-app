@@ -30,7 +30,7 @@ const CustomModal = ({isModalVisible, setIsModalVisible, isPredicted, prediction
                     isPredicted && prediction ? (
                         <Text
                             style={{textAlign: "center", color: "rgba(59, 3, 114, 1)", fontWeight: "bold", fontSize: 18, marginHorizontal: 30}}>
-                            {prediction}
+                            {prediction && (JSON.parse(prediction).prediction).toString().toLocaleUpperCase()}
                         </Text>
                     ) : (
                         <Text
