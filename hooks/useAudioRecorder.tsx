@@ -248,7 +248,7 @@ export default function useAudioRecorder() {
                     httpMethod: 'POST',
                     uploadType: FileSystem.FileSystemUploadType.MULTIPART,
                     fieldName: 'audio',
-                    mimeType: 'audio/wav',
+                    mimeType: 'audio/AMR',
                     headers: {
                         'Content-Type': 'multipart/form-data',
                     },
