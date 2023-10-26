@@ -4,25 +4,26 @@ import {
     AndroidAudioEncoder,
     AndroidOutputFormat,
     IOSAudioQuality,
-    IOSOutputFormat
-} from "expo-av/build/Audio/RecordingConstants";
+    IOSOutputFormat,
+} from 'expo-av/build/Audio/RecordingConstants';
 import * as FileSystem from 'expo-file-system';
-import {requestPermissionsAsync} from "expo-media-library";
-import {Alert} from "react-native";
+import * as MediaLibrary from 'expo-media-library';
+import {requestPermissionsAsync} from 'expo-media-library';
+import {useLoadingContext} from "@context/LoadingContext";
 
 const options = {
     isMeteringEnabled: true,
     android: {
-        extension: '.wav',
-        outputFormat: AndroidOutputFormat.MPEG_4,
-        audioEncoder: AndroidAudioEncoder.AAC,
+        extension: '.amr',
+        outputFormat: AndroidOutputFormat.AMR_WB,
+        audioEncoder: AndroidAudioEncoder.AMR_WB,
         sampleRate: 44100,
         numberOfChannels: 2,
         bitRate: 128000,
     },
     ios: {
-        extension: '.wav',
-        outputFormat: IOSOutputFormat.MPEG4AAC,
+        extension: '.amr',
+        outputFormat: IOSOutputFormat.AMR_WB,
         audioQuality: IOSAudioQuality.MAX,
         sampleRate: 44100,
         numberOfChannels: 2,
@@ -45,14 +46,24 @@ export default function useAudioRecorder() {
     const [isRecording, setIsRecording] = useState<boolean>(false);
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [progress, setProgress] = useState<number>(0);
+    const [audioDuration] = useState<number>(0);
+    const [status, setStatus] = useState("idle");
+    const {showLoading, hideLoading} = useLoadingContext();
+    const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+    const [isPredicted, setIsPredicted] = useState<boolean>(false);
+    const [prediction, setPrediction] = useState<string>("");
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
 
         if (recording) {
             interval = setInterval(async () => {
-                const status = await recording.getStatusAsync();
-                setTimer(status.durationMillis);
+                try {
+                    const status = await recording.getStatusAsync();
+                    setTimer(status.durationMillis);
+                } catch (error) {
+                    console.error('Error getting recording status:', error);
+                }
             }, 1000);
         }
 
@@ -68,7 +79,14 @@ export default function useAudioRecorder() {
                     sound.getStatusAsync().then((status: AVPlaybackStatus) => {
                         if (status.isLoaded && status.durationMillis) {
                             setProgress(status.positionMillis / status.durationMillis);
-                            setTimer(status.positionMillis); // Update the timer
+                            setTimer(status.positionMillis);
+                        }
+
+                        if (status.isLoaded && !status.isPlaying) {
+                            setIsPlaying(false);
+                            setProgress(0);
+                            setTimer(0);
+                            setStatus("recorded");
                         }
                     });
                 }
@@ -81,25 +99,35 @@ export default function useAudioRecorder() {
     }, [isPlaying, sound]);
 
     async function startRecording() {
-        const permission = await requestPermissionsAsync();
-        if (!permission.granted) {
-            console.log('Permission not granted to save file');
-            return;
-        }
-
-        const {granted} = await Audio.requestPermissionsAsync();
-        await Audio.setAudioModeAsync({
-            allowsRecordingIOS: true,
-            playsInSilentModeIOS: true,
-        });
-
-        if (!granted) return;
-
+        setIsPredicted(false);
         try {
+            const permission = await requestPermissionsAsync();
+
+            if (!permission.granted) {
+                console.log('Permission not granted to save file');
+                return;
+            }
+
+            const {status} = await MediaLibrary.requestPermissionsAsync();
+
+            if (status !== 'granted') {
+                console.log('Permission to access media library is not granted');
+                return;
+            }
+
+            const {granted} = await Audio.requestPermissionsAsync();
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: true,
+                playsInSilentModeIOS: true,
+            });
+
+            if (!granted) return;
+
             const {recording} = await Audio.Recording.createAsync(options);
             setRecording(recording);
             setIsRecording(true);
-            setTimer(recording._progressUpdateIntervalMillis);
+            // setTimer(recording._progressUpdateIntervalMillis);
+            setStatus("recording");
         } catch (error) {
             console.error('Failed to start recording', error);
             setRecording(null);
@@ -111,67 +139,59 @@ export default function useAudioRecorder() {
 
         try {
             await recording.stopAndUnloadAsync();
-            await Audio.setAudioModeAsync(
-                {
-                    allowsRecordingIOS: false,
-                }
-            );
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: false,
+            });
 
-            const uri = recording.getURI();
-            if (uri) {
-                const parts = uri.split('/');
-                const fileName = parts[parts.length - 1];
-                console.log('File name: ', fileName);
+            const recordingUri = recording.getURI();
+            if (recordingUri) {
+                // const asset = await MediaLibrary.createAssetAsync(recordingUri);
+                //
+                // if (!asset) {
+                //     console.log('Could not create asset');
+                //     return;
+                // }
+                //
+                // const album = await MediaLibrary.getAlbumAsync('AudioLab');
+                //
+                // if (album) {
+                //     await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+                // } else {
+                //     await MediaLibrary.createAlbumAsync('AudioLab', asset, false);
+                // }
+                //
+                // if (sound) {
+                //     sound.getStatusAsync().then((status: AVPlaybackStatus) => {
+                //         if (status.isLoaded && status.durationMillis) {
+                //             setAudioDuration(status.durationMillis);
+                //         }
+                //     });
+                // }
 
-                const directory = FileSystem.documentDirectory + 'akila/';
-                const newPath = directory + fileName;
-
-                console.log('Directory: ', directory);
-
-                const dirInfo = await FileSystem.getInfoAsync(directory);
-                if (!dirInfo.exists) {
-                    console.log('Creating directory: ', directory);
-                    await FileSystem.makeDirectoryAsync(directory, {intermediates: true});
-                }
-
-                const fileInfo = await FileSystem.getInfoAsync(newPath);
-                if (!fileInfo.exists) {
-                    await FileSystem.moveAsync({
-                        from: uri,
-                        to: newPath,
-                    });
-
-                    console.log('Audio file moved to: ', newPath);
-                    setUri(newPath);
-                    Alert.alert('Audio file saved to: ', newPath);
-                    console.log('Audio file saved to: ', fileInfo);
-
-                } else {
-                    console.log('A file already exists at the destination path.');
-                }
+                setUri(recordingUri);
+                setRecording(null);
+                setTimer(0);
+                setIsRecording(false);
+                setStatus("recorded");
             }
-
-            setRecording(null);
-            setTimer(0);
-            setIsRecording(false);
         } catch (error) {
-            console.log(error);
+            console.error('Error stopping recording:', error);
         }
     }
-
 
     async function playSound() {
         if (!uri) return;
 
-        const {sound: newSound} = await Audio.Sound.createAsync({uri});
-        console.log('Playing Sound');
-        setSound(newSound);
-
         try {
+            const {sound: newSound} = await Audio.Sound.createAsync({uri});
+            console.log('Playing Sound');
+            setSound(newSound);
+            setStatus("playing");
+
             await newSound.playAsync();
             setIsPlaying(true);
         } catch (error) {
-            console.log(error);
+            console.error('Error playing sound:', error);
         }
     }
 
@@ -182,14 +202,16 @@ export default function useAudioRecorder() {
             if (isPlaying) {
                 await sound.pauseAsync();
                 setIsPlaying(false);
+                setStatus("paused");
                 console.log('Pausing Sound');
             } else {
                 await sound.playAsync();
                 setIsPlaying(true);
                 console.log('Resuming Sound');
+                setStatus("playing");
             }
         } catch (error) {
-            console.log(error);
+            console.error('Error pausing/resuming sound:', error);
         }
     }
 
@@ -202,12 +224,14 @@ export default function useAudioRecorder() {
             setIsPlaying(false);
             setProgress(0);
             setTimer(0);
+            setStatus("recorded");
         } catch (error) {
-            console.log(error);
+            console.error('Error stopping sound:', error);
         }
     }
 
     const handleUploadAudio = async () => {
+        showLoading();
         try {
             if (!uri) {
                 console.log('No audio recorded to upload.');
@@ -216,7 +240,7 @@ export default function useAudioRecorder() {
 
             console.log('Uploading audio:', uri);
 
-            const response = await FileSystem.uploadAsync(
+            const response: FileSystem.FileSystemUploadResult = await FileSystem.uploadAsync(
                 'http://13.126.222.46:5000/v1/sounddetect',
                 uri,
                 {
@@ -230,20 +254,36 @@ export default function useAudioRecorder() {
                 }
             );
 
+            if (response && response.body && response.status === 200) {
+                setIsPredicted(true);
+                setPrediction(response.body);
+            }
+
+            setIsModalVisible(true);
+
             console.log('Audio upload response:', response.body);
+            hideLoading();
         } catch (error) {
             console.error('Error uploading audio:', error);
+            hideLoading();
+            setIsPredicted(false);
         }
     };
 
     return {
         recording,
+        status,
         sound,
         uri,
         timer,
         isRecording,
         isPlaying,
         progress,
+        audioDuration,
+        isModalVisible,
+        isPredicted,
+        prediction,
+        setIsModalVisible,
         startRecording,
         stopRecording,
         playSound,
