@@ -1,6 +1,20 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "paths": {
+      "@components/*": ["./components/*"],
+      "@assets/*": ["./assets/*"],
+      "@screens/*": ["./screens/*"],
+      "@navigation/*": ["./navigation/*"],
+      "@helpers/*": ["./helpers/*"],
+      "@features/*": ["./features/*"],
+      "@services/*": ["./services/*"],
+      "@theme/*": ["./theme/*"],
+      "@constants/*": ["./constants/*"],
+      "@context/*": ["./context/*"],
+      "@config/*": ["./config/*"],
+      "@hooks/*": ["./hooks/*"],
+    }
   }
 }
