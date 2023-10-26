@@ -266,6 +266,7 @@ export default function useAudioRecorder() {
         } catch (error) {
             console.error('Error uploading audio:', error);
             hideLoading();
+            setIsModalVisible(true);
             setIsPredicted(false);
         }
     };
