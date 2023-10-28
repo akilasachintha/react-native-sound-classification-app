@@ -18,7 +18,6 @@
       "supportsTablet": true
     },
     "android": {
-      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon1.png",
         "backgroundColor": "#ffffff"
@@ -32,9 +31,6 @@
       "eas": {
         "projectId": "6a172ac6-92be-4805-b138-13ae1ebca955"
       }
-    },
-    "plugins": [
-      "expo-build-properties"
-    ]
+    }
   }
 }

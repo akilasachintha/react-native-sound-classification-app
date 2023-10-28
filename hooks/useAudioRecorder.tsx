@@ -241,7 +241,7 @@ export default function useAudioRecorder() {
             console.log('Uploading audio:', uri);
 
             const response: FileSystem.FileSystemUploadResult = await FileSystem.uploadAsync(
-                'http://13.126.222.46:5000/v1/sounddetect',
+                'https://www.fasttrackmovie.com/v1/sounddetect',
                 uri,
                 {
                     httpMethod: 'POST',
