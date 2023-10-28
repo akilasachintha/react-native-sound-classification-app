@@ -10,7 +10,6 @@ import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import {requestPermissionsAsync} from 'expo-media-library';
 import {useLoadingContext} from "@context/LoadingContext";
-import { Alert } from 'react-native';
 
 const options = {
     isMeteringEnabled: true,
@@ -255,8 +254,6 @@ export default function useAudioRecorder() {
                 }
             );
 
-            Alert.alert(response.body);
-
             if (response && response.body && response.status === 200) {
                 setIsPredicted(true);
                 setPrediction(response.body);
@@ -268,9 +265,6 @@ export default function useAudioRecorder() {
             hideLoading();
         } catch (error) {
             console.error('Error uploading audio:', error);
-            if(error){
-                Alert.alert(error.message);
-            }
             hideLoading();
             setIsModalVisible(true);
             setIsPredicted(false);
